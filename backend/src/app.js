@@ -6,6 +6,8 @@ import mongoose from "mongoose";
 import cors from "cors";
 import { connectToSocket } from "./controllers/socketManager.js";
 
+import userRoutes from "./routes/users.route.js";
+
 const app = express();
 const server = createServer(app);
 const io = connectToSocket(server);
@@ -17,7 +19,7 @@ app.use(express.urlencoded({ limit: "40kb", extended: true }));
 // app.get("/home", (req, res) => {
 //   res.send("Hollo World");
 // });
-
+app.use("/api/v1/users", userRoutes);
 const start = async () => {
   const connectionDB = await mongoose.connect(
     "mongodb+srv://admin:admin@cluster0.bfezvxb.mongodb.net/"
