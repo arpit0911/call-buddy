@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useContext, useState } from "react";
 import {
   Box,
   Card,
@@ -24,13 +24,15 @@ import {
   VideoCall,
   AccountCircle,
 } from "@mui/icons-material";
+import { AuthContext } from "../contexts/AuthContext";
 
-const AuthPage = ({ onLogin, onSignup }) => {
+const AuthPage = () => {
   const [activeTab, setActiveTab] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const theme = useTheme();
+  const { onLogin, onSignup } = useContext(AuthContext);
 
   // Form states
   const [loginForm, setLoginForm] = useState({
@@ -39,7 +41,7 @@ const AuthPage = ({ onLogin, onSignup }) => {
   });
 
   const [signupForm, setSignupForm] = useState({
-    fullname: "",
+    name: "",
     username: "",
     password: "",
   });
@@ -56,6 +58,7 @@ const AuthPage = ({ onLogin, onSignup }) => {
 
     try {
       // Add your login logic here
+      console.log("onLogin", onLogin);
       await onLogin(loginForm);
     } catch (err) {
       setError("Invalid credentials. Please try again.");
@@ -234,9 +237,9 @@ const AuthPage = ({ onLogin, onSignup }) => {
                 variant="outlined"
                 margin="normal"
                 required
-                value={signupForm.fullname}
+                value={signupForm.name}
                 onChange={(e) =>
-                  setSignupForm({ ...signupForm, fullname: e.target.value })
+                  setSignupForm({ ...signupForm, name: e.target.value })
                 }
                 InputProps={{
                   startAdornment: (

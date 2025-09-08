@@ -1,6 +1,7 @@
 import React from "react";
 import "../App.css";
 import { Link } from "react-router-dom";
+import { Button } from "@mui/material";
 
 export default function LandingPage() {
   return (
@@ -10,9 +11,23 @@ export default function LandingPage() {
           <h2>CallBuddy</h2>
         </div>
         <div className="nav-list">
-          <p>Join as Guest</p>
-          <p>Register</p>
-          <button className="p-btn">Login</button>
+          <Button
+            variant="link"
+            sx={{ textTransform: "capitalize", color: "white" }}
+          >
+            Join as Guest
+          </Button>
+          <Link to={"/auth"}>
+            <Button
+              variant="link"
+              sx={{ textTransform: "capitalize", color: "white" }}
+            >
+              Register
+            </Button>
+          </Link>
+          <Link to={"/auth"}>
+            <button className="p-btn">Login</button>
+          </Link>
         </div>
       </nav>
       <div className="landing-main-container">
