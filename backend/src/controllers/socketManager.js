@@ -15,7 +15,7 @@ export const connectToSocket = (server) => {
   });
 
   io.on("connection", (socket) => {
-    // console.log("user connected", socket.id);
+    console.log("user connected", socket.id);
     socket.on("join-call", (path) => {
       if (connections[path] === undefined) {
         connections[path] = [];
@@ -27,11 +27,11 @@ export const connectToSocket = (server) => {
         io.to(connections[path][i]).emit(
           "user-joined",
           socket.id,
-          connection[path]
+          connections[path]
         );
       }
 
-      if (messages[path] === undefined) {
+      if (messages[path] !== undefined) {
         for (let i = 0; i < messages[path].length; i++) {
           io.to(socket.id).emit(
             "chat-message",
@@ -77,14 +77,14 @@ export const connectToSocket = (server) => {
 
     socket.on("disconnect", () => {
       var diffTime = Math.abs(new Date() - timeOnline[socket.id]);
-      var ksy;
+      var key;
 
       for (const [k, v] of JSON.parse(
         JSON.stringify(Object.entries(connections))
       )) {
         for (let i = 0; i < v.length; ++i) {
           if (v[i] === socket.id) {
-            ksy = k;
+            key = k;
             for (let j = 0; j < connections[key].length; ++j) {
               io.to(connections[key][j]).emit("user-left", socket.id);
             }

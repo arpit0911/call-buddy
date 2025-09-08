@@ -2,7 +2,6 @@ import { Button, TextField } from "@mui/material";
 import React, { useEffect, useRef, useState } from "react";
 import io from "socket.io-client";
 
-
 const server_url = "http://localhost:3000";
 var connections = {};
 
@@ -108,8 +107,99 @@ export default function VideoMeet() {
     }
   }, [audio, video]);
 
+  // TODO get message from server
+  const gotMessageFromServer = (formId, message) => {};
+  // TODO add new message
+  const addMessage = () => {};
+
   const connectToSocketServer = () => {
     socketRef.current = io.connect(server_url, { secure: false });
+    socketRef.current.on("signal", gotMessageFromServer);
+    socketRef.current.on("connect", () => {
+      socketRef.current.emit("join-call", window.location.href);
+      socketId.current = socketRef.current.id;
+      socketRef.current.on("chat-message", addMessage);
+      socketRef.current.on("user-left", (id) => {
+        // TODO
+        setVideos((vids) => vids.filter((v) => v.id !== id));
+      });
+      socketRef.current.on("user-joined", (id, clients) => {
+        clients.forEach((socketListId) => {
+          connections[socketListId] = new RTCPeerConnection(
+            peerConfigConnections
+          );
+          // * ice = Interactive Connectivity Establishment
+          connections[socketListId].onicecandidate = (event) => {
+            if (event.candidate != null) {
+              socketRef.current.emit(
+                "signal",
+                socketListId,
+                JSON.stringify({ ice: event.candidate })
+              );
+            }
+          };
+          connections[socketListId].onaddstream = (event_) => {
+            let videoExists = videoRef.current.find(
+              (video) => video.id === socketListId
+            );
+            if (videoExists) {
+              setVideos((videos) => {
+                const updatedVideos = videos.map((video) =>
+                  video.socketid === socketListId
+                    ? { ...video, stream: event_.stream }
+                    : video
+                );
+                videoRef.current = updatedVideos;
+                return updatedVideos;
+              });
+            } else {
+              let newVideo = {
+                socketId: socketListId,
+                stream: event.stream,
+                autoPlay: true,
+                playsinline: true,
+              };
+              setVideos((videos) => {
+                const updatedVideos = [...videos, newVideo];
+                videoRef.current = updatedVideos;
+                return updatedVideos;
+              });
+            }
+          };
+
+          if (window.localStream !== undefined && window.localStream !== null) {
+            connections[socketListId].addStream(window.localStream);
+          } else {
+            //   TODO blackSilence
+            //   let blackSilence
+          }
+        });
+        if (id === socketId.current) {
+          for (let id2 in connections) {
+            if (id2 === socketId.current) continue;
+            try {
+              connections[id2].addStream(window.localStream);
+            } catch (error) {
+              console.log(error);
+            }
+            connections[id2].createOffer().then((description) => {
+              connections[id2]
+                .setLocalDescription(description)
+                .then(() => {
+                  socketRef.current.emit(
+                    "signal",
+                    id2,
+                    JSON.stringify({ sdp: connections[id2].localDescription })
+                  );
+                })
+                .catch((error) => {
+                  console.log(error);
+                });
+            });
+          }
+        }
+      });
+    });
   };
 
   const getMedia = () => {
@@ -128,7 +218,6 @@ export default function VideoMeet() {
       {askForUsername === true ? (
         <div>
           <h2>Entered into Lobby</h2>
-          {username}
           <TextField
             variant="outlined"
             label="Username"
