@@ -22,7 +22,7 @@ export default function LandingPage() {
             Ones
           </h1>
           <p>Cover a distance by Call-Buddy</p>
-          <Link to="/home">
+          <Link to="/auth">
             <button className="p-btn">Get Started</button>
           </Link>
         </div>
