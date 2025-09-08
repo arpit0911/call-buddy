@@ -10,19 +10,25 @@ const login = async (req, res) => {
       .status(httpStatus.BAD_REQUEST)
       .json({ message: "All fields are required" });
   }
-  const user = await User.findOne({ username });
-  if (!user) {
-    return res.status(httpStatus.NOT_FOUND).json({ message: "User not found" });
-  }
-
-  if (bcrypt.compare(password, user.password)) {
-    let token = crypto.randomBytes(20).toString("hex");
-    user.token = token;
-    await user.save();
-
-    return res.status(httpStatus.OK).json({ toke: token });
-  }
   try {
+    const user = await User.findOne({ username });
+    if (!user) {
+      return res
+        .status(httpStatus.NOT_FOUND)
+        .json({ message: "User not found" });
+    }
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (isPasswordValid) {
+      let token = crypto.randomBytes(20).toString("hex");
+      user.token = token;
+      await user.save();
+
+      return res.status(httpStatus.OK).json({ toke: token });
+    } else {
+      return res
+        .status(httpStatus.UNAUTHORIZED)
+        .json({ message: "Invalid Username or Password" });
+    }
   } catch (error) {
     res
       .status(httpStatus.INTERNAL_SERVER_ERROR)

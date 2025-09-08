@@ -61,7 +61,8 @@ const AuthPage = () => {
       console.log("onLogin", onLogin);
       await onLogin(loginForm);
     } catch (err) {
-      setError("Invalid credentials. Please try again.");
+      let message = err.response.data.message;
+      setError(message || "Invalid credentials. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -76,7 +77,9 @@ const AuthPage = () => {
       // Add your signup logic here
       await onSignup(signupForm);
     } catch (err) {
-      setError("Failed to create account. Please try again.");
+      console.log(err);
+      let message = err.response.data.message;
+      setError(message || "Failed to create account. Please try again.");
     } finally {
       setLoading(false);
     }
