@@ -14,7 +14,7 @@ import {
   DialogActions,
   Chip,
 } from "@mui/material";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import io from "socket.io-client";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import VideocamOffIcon from "@mui/icons-material/VideocamOff";
@@ -166,6 +166,31 @@ const TypingIndicator = styled(Box)(({ theme }) => ({
   },
 }));
 
+// FIXED: Separate component for peer videos to prevent re-renders
+const PeerVideo = memo(({ video }) => {
+  const videoRef = useRef(null);
+
+  // FIX: Only update stream once when it changes
+  useEffect(() => {
+    if (videoRef.current && video.stream) {
+      videoRef.current.srcObject = video.stream;
+    }
+  }, [video.stream]);
+
+  return (
+    <PeerVideoContainer>
+      <video ref={videoRef} autoPlay playsInline data-socket={video.socketId} />
+      <PeerName
+        label={`Peer: ${video.socketId.substring(0, 8)}`}
+        variant="outlined"
+        size="small"
+      />
+    </PeerVideoContainer>
+  );
+});
+
+PeerVideo.displayName = "PeerVideo";
+
 export default function VideoMeet() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
@@ -200,7 +225,6 @@ export default function VideoMeet() {
   const [participantCount, setParticipantCount] = useState(1);
   const [usersTyping, setUsersTyping] = useState({});
 
-  // FIX: Track if message was sent by current user to avoid duplicates
   const sentMessagesRef = useRef(new Set());
 
   // Auto-scroll to latest message
@@ -531,14 +555,11 @@ export default function VideoMeet() {
     }
   };
 
-  // FIX: Only add message if not already sent by this user
   const addMessage = (data, sender, socketIdSender, timestamp) => {
     console.log(`💬 Message received from ${sender}: "${data}"`);
 
-    // Create unique identifier for this message
     const messageKey = `${socketIdSender}-${data}-${timestamp}`;
 
-    // If this is a message from another user OR we haven't sent this message yet
     if (
       socketIdSender !== socketIdRef.current ||
       !sentMessagesRef.current.has(messageKey)
@@ -561,7 +582,6 @@ export default function VideoMeet() {
       };
 
       setMessages((prev) => {
-        // Double-check it doesn't exist in messages already
         const exists = prev.some((msg) => msg.key === messageKey);
         if (!exists) {
           return [...prev, newMsg];
@@ -614,7 +634,6 @@ export default function VideoMeet() {
       socketRef.current.on("user-left", (id) => {
         console.log("🔴 User left:", id);
         setVideos((vids) => vids.filter((v) => v.socketId !== id));
-        // FIX: Decrement participant count properly
         setParticipantCount((prev) => Math.max(1, prev - 1));
         if (connections[id]) {
           connections[id].close();
@@ -625,7 +644,6 @@ export default function VideoMeet() {
 
       socketRef.current.on("user-joined", (id, clients) => {
         console.log("🟢 User joined:", id, "Total clients:", clients.length);
-        // FIX: Set participant count to actual length (this includes current user)
         setParticipantCount(clients.length);
 
         clients.forEach((socketListId) => {
@@ -652,6 +670,7 @@ export default function VideoMeet() {
               );
 
               if (videoExists) {
+                // FIX: Use setVideos callback to update only the stream, not the whole array
                 setVideos((videos) => {
                   const updatedVideos = videos.map((video) =>
                     video.socketId === socketListId
@@ -751,12 +770,10 @@ export default function VideoMeet() {
       const timestamp = new Date().toISOString();
       const messageKey = `${socketIdRef.current}-${message}-${timestamp}`;
 
-      // Mark this message as sent by us
       sentMessagesRef.current.add(messageKey);
 
       socketRef.current.emit("chat-message", message, username);
 
-      // Add to local messages immediately
       const newMsg = {
         text: message,
         sender: username,
@@ -771,7 +788,6 @@ export default function VideoMeet() {
       setMessages((prev) => [...prev, newMsg]);
       setMessage("");
 
-      // Clear typing indicator
       socketRef.current.emit("typing", window.location.href, false, username);
       setUsersTyping((prev) => {
         const updated = { ...prev };
@@ -784,7 +800,6 @@ export default function VideoMeet() {
   const handleMessageChange = (e) => {
     setMessage(e.target.value);
 
-    // Send typing indicator
     if (socketRef.current) {
       socketRef.current.emit("typing", window.location.href, true, username);
 
@@ -987,22 +1002,7 @@ export default function VideoMeet() {
                   key={video.socketId}
                   sx={{ minHeight: 0 }}
                 >
-                  <PeerVideoContainer>
-                    <video
-                      data-socket={video.socketId}
-                      ref={(ref) => {
-                        if (ref && video.stream) {
-                          ref.srcObject = video.stream;
-                        }
-                      }}
-                      autoPlay
-                    />
-                    <PeerName
-                      label={`Peer: ${video.socketId.substring(0, 8)}`}
-                      variant="outlined"
-                      size="small"
-                    />
-                  </PeerVideoContainer>
+                  <PeerVideo video={video} />
                 </Grid>
               ))}
             </Grid>
