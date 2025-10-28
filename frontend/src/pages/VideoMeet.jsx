@@ -646,74 +646,108 @@ export default function VideoMeet() {
         console.log("🟢 User joined:", id, "Total clients:", clients.length);
         setParticipantCount(clients.length);
 
+        // FIX: Set up all connections, but skip self
         clients.forEach((socketListId) => {
-          if (!connections[socketListId]) {
-            connections[socketListId] = new RTCPeerConnection(
-              peerConfigConnections
-            );
+          console.log(
+            `Processing client: ${socketListId}, Current user: ${socketIdRef.current}`
+          );
 
-            connections[socketListId].onicecandidate = (event) => {
-              if (event.candidate != null) {
-                socketRef.current.emit(
-                  "signal",
-                  socketListId,
-                  JSON.stringify({ ice: event.candidate })
-                );
-              }
-            };
+          // SKIP SELF - don't connect to yourself
+          if (socketListId === socketIdRef.current) {
+            console.log("⏭️ Skipping self connection");
+            return;
+          }
 
-            connections[socketListId].ontrack = (event) => {
-              console.log("🎥 ontrack event from:", socketListId);
+          // If connection already exists, update it but don't recreate
+          if (connections[socketListId]) {
+            console.log("✅ Connection already exists for:", socketListId);
 
-              let videoExists = videoRef.current.find(
-                (video) => video.socketId === socketListId
-              );
-
-              if (videoExists) {
-                // FIX: Use setVideos callback to update only the stream, not the whole array
-                setVideos((videos) => {
-                  const updatedVideos = videos.map((video) =>
-                    video.socketId === socketListId
-                      ? { ...video, stream: event.streams[0] }
-                      : video
-                  );
-                  videoRef.current = updatedVideos;
-                  return updatedVideos;
-                });
-              } else {
-                let newVideo = {
-                  socketId: socketListId,
-                  stream: event.streams[0],
-                  autoPlay: true,
-                  playsinline: true,
-                };
-                setVideos((videos) => {
-                  const updatedVideos = [...videos, newVideo];
-                  videoRef.current = updatedVideos;
-                  return updatedVideos;
-                });
-              }
-            };
-
+            // Still add local stream if not already added
             if (
               window.localStream !== undefined &&
               window.localStream !== null
             ) {
               window.localStream.getTracks().forEach((track) => {
-                connections[socketListId].addTrack(track, window.localStream);
-              });
-            } else {
-              let blackSilence = (...args) =>
-                new MediaStream([black(...args), silence()]);
-              window.localStream = blackSilence();
-              window.localStream.getTracks().forEach((track) => {
-                connections[socketListId].addTrack(track, window.localStream);
+                try {
+                  connections[socketListId].addTrack(track, window.localStream);
+                } catch (e) {
+                  // Track might already be added
+                  console.log("ℹ️ Track already added:", e.message);
+                }
               });
             }
+            return;
+          }
+
+          // CREATE NEW CONNECTION
+          console.log("🆕 Creating new connection for:", socketListId);
+          connections[socketListId] = new RTCPeerConnection(
+            peerConfigConnections
+          );
+
+          connections[socketListId].onicecandidate = (event) => {
+            if (event.candidate != null) {
+              socketRef.current.emit(
+                "signal",
+                socketListId,
+                JSON.stringify({ ice: event.candidate })
+              );
+            }
+          };
+
+          // CRITICAL: Set up ontrack handler
+          connections[socketListId].ontrack = (event) => {
+            console.log("🎥 ontrack event from:", socketListId);
+
+            let videoExists = videoRef.current.find(
+              (video) => video.socketId === socketListId
+            );
+
+            if (videoExists) {
+              console.log("📝 Updating existing video stream");
+              setVideos((videos) => {
+                const updatedVideos = videos.map((video) =>
+                  video.socketId === socketListId
+                    ? { ...video, stream: event.streams[0] }
+                    : video
+                );
+                videoRef.current = updatedVideos;
+                return updatedVideos;
+              });
+            } else {
+              console.log("➕ Adding new video stream");
+              let newVideo = {
+                socketId: socketListId,
+                stream: event.streams[0],
+                autoPlay: true,
+                playsinline: true,
+              };
+              setVideos((videos) => {
+                const updatedVideos = [...videos, newVideo];
+                videoRef.current = updatedVideos;
+                return updatedVideos;
+              });
+            }
+          };
+
+          // Add local stream
+          if (window.localStream !== undefined && window.localStream !== null) {
+            window.localStream.getTracks().forEach((track) => {
+              connections[socketListId].addTrack(track, window.localStream);
+            });
+          } else {
+            let blackSilence = (...args) =>
+              new MediaStream([black(...args), silence()]);
+            window.localStream = blackSilence();
+            window.localStream.getTracks().forEach((track) => {
+              connections[socketListId].addTrack(track, window.localStream);
+            });
           }
         });
 
+        // If I'm the joining user, create offers
         if (id === socketIdRef.current) {
+          console.log("📤 I am the joining user, creating offers");
           for (let id2 in connections) {
             if (id2 === socketIdRef.current) continue;
 
@@ -910,6 +944,7 @@ export default function VideoMeet() {
           backgroundColor: "rgba(0, 0, 0, 0.4)",
           backdropFilter: "blur(10px)",
           borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+          flexShrink: 0,
         }}
       >
         <Box>
@@ -972,6 +1007,7 @@ export default function VideoMeet() {
           gap: 2,
           padding: 2,
           overflow: "hidden",
+          minHeight: 0,
         }}
       >
         {/* Videos Section */}
@@ -982,6 +1018,7 @@ export default function VideoMeet() {
             flexDirection: "column",
             gap: 2,
             minWidth: 0,
+            minHeight: 0,
           }}
         >
           {/* Local Video */}
@@ -992,7 +1029,7 @@ export default function VideoMeet() {
 
           {/* Remote Videos Grid */}
           {videos.length > 0 && (
-            <Grid container spacing={1} sx={{ flex: 1, minHeight: 0 }}>
+            <Grid container spacing={1} sx={{ flex: 1 }}>
               {videos.map((video) => (
                 <Grid
                   item
@@ -1021,6 +1058,8 @@ export default function VideoMeet() {
               borderRadius: "12px",
               overflow: "hidden",
               border: "1px solid rgba(255, 255, 255, 0.1)",
+              flexShrink: 0,
+              minHeight: 0,
             }}
           >
             {/* Chat Header */}
@@ -1028,6 +1067,7 @@ export default function VideoMeet() {
               sx={{
                 padding: 1.5,
                 borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+                flexShrink: 0,
               }}
             >
               <Box
@@ -1059,6 +1099,7 @@ export default function VideoMeet() {
                 display: "flex",
                 flexDirection: "column",
                 gap: 1,
+                minHeight: 0,
                 "&::-webkit-scrollbar": { width: "6px" },
                 "&::-webkit-scrollbar-track": { background: "transparent" },
                 "&::-webkit-scrollbar-thumb": {
@@ -1135,6 +1176,7 @@ export default function VideoMeet() {
                 borderTop: "1px solid rgba(255, 255, 255, 0.1)",
                 display: "flex",
                 gap: 1,
+                flexShrink: 0,
               }}
             >
               <TextField
@@ -1269,7 +1311,10 @@ export default function VideoMeet() {
         }}
       >
         <DialogTitle
-          sx={{ borderBottom: "1px solid rgba(255, 255, 255, 0.1)" }}
+          sx={{
+            borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+            flexShrink: 0,
+          }}
         >
           Messages ({messages.length})
         </DialogTitle>
@@ -1280,6 +1325,8 @@ export default function VideoMeet() {
             gap: 1,
             flex: 1,
             overflowY: "auto",
+            minHeight: 0,
+            padding: 2,
           }}
         >
           {messages.length === 0 ? (
@@ -1334,7 +1381,12 @@ export default function VideoMeet() {
           )}
         </DialogContent>
         <DialogActions
-          sx={{ borderTop: "1px solid rgba(255, 255, 255, 0.1)", gap: 1, p: 1 }}
+          sx={{
+            borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+            gap: 1,
+            p: 1,
+            flexShrink: 0,
+          }}
         >
           <TextField
             fullWidth
