@@ -695,39 +695,39 @@ export default function VideoMeet() {
             }
           };
 
-          // CRITICAL: Set up ontrack handler
           connections[socketListId].ontrack = (event) => {
             console.log("🎥 ontrack event from:", socketListId);
 
-            let videoExists = videoRef.current.find(
-              (video) => video.socketId === socketListId
-            );
+            setVideos((prevVideos) => {
+              // Check CURRENT state, not ref
+              const existingVideoIndex = prevVideos.findIndex(
+                (v) => v.socketId === socketListId
+              );
 
-            if (videoExists) {
-              console.log("📝 Updating existing video stream");
-              setVideos((videos) => {
-                const updatedVideos = videos.map((video) =>
-                  video.socketId === socketListId
-                    ? { ...video, stream: event.streams[0] }
-                    : video
-                );
+              if (existingVideoIndex !== -1) {
+                // Update existing
+                console.log("📝 Updating video for:", socketListId);
+                const updatedVideos = [...prevVideos];
+                updatedVideos[existingVideoIndex] = {
+                  ...updatedVideos[existingVideoIndex],
+                  stream: event.streams[0],
+                };
                 videoRef.current = updatedVideos;
                 return updatedVideos;
-              });
-            } else {
-              console.log("➕ Adding new video stream");
-              let newVideo = {
-                socketId: socketListId,
-                stream: event.streams[0],
-                autoPlay: true,
-                playsinline: true,
-              };
-              setVideos((videos) => {
-                const updatedVideos = [...videos, newVideo];
+              } else {
+                // Add new (only if doesn't exist)
+                console.log("➕ Adding video for:", socketListId);
+                const newVideo = {
+                  socketId: socketListId,
+                  stream: event.streams[0],
+                  autoPlay: true,
+                  playsinline: true,
+                };
+                const updatedVideos = [...prevVideos, newVideo];
                 videoRef.current = updatedVideos;
                 return updatedVideos;
-              });
-            }
+              }
+            });
           };
 
           // Add local stream
