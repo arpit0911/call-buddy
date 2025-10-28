@@ -15,7 +15,7 @@ export default function VideoMeet() {
   let localVideoRef = useRef(); // my video
   const [videoAvailable, setVideoAvailable] = useState(true); // to check if permission for video access
   const [audioAvailable, setAudioAvailable] = useState(true); // to check if permission for audio access
-  const [screenAvailable, setScreenAvailable] = useState(); //to check if permission for screen sharing
+  const [screenAvailable, setScreenAvailable] = useState(false); //to check if permission for screen sharing
 
   const [video, setVideo] = useState(true); // to toggle the video on off
   const [audio, setAudio] = useState(true); // to toggle the audio on off
@@ -37,17 +37,27 @@ export default function VideoMeet() {
 
   const getPermissions = async () => {
     try {
-      // get permission for video
       const videoPermission = await navigator.mediaDevices.getUserMedia({
         video: true,
       });
-      videoPermission ? setVideoAvailable(true) : setVideoAvailable(false);
+      if (videoPermission) {
+        setVideoAvailable(true);
+        console.log("Video permission granted");
+      } else {
+        setVideoAvailable(false);
+        console.log("Video permission denied");
+      }
 
-      // get permission for audio
       const audioPermission = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
-      audioPermission ? setAudioAvailable(true) : setAudioAvailable(false);
+      if (audioPermission) {
+        setAudioAvailable(true);
+        console.log("Audio permission granted");
+      } else {
+        setAudioAvailable(false);
+        console.log("Audio permission denied");
+      }
 
       // get permission for screen sharing
       if (navigator.mediaDevices.getDisplayMedia) {
@@ -63,6 +73,7 @@ export default function VideoMeet() {
           audio: audioAvailable,
         });
         if (userMediaStream) {
+          console.log("userMediaStream", userMediaStream);
           window.localStream = userMediaStream;
           // check if UI rendered
           if (localVideoRef.current) {
@@ -77,26 +88,124 @@ export default function VideoMeet() {
   };
 
   useEffect(() => {
+    console.log("Initializing permissions");
     getPermissions();
-  }, []);
 
-  const getMediaUserSuccess = (stream) => {};
+    return () => {
+      // Cleanup
+      if (window.localStream) {
+        window.localStream.getTracks().forEach((track) => track.stop());
+      }
+    };
+  }, []); // Empty dependency array - run once on mount
+
+  const getMediaUserSuccess = (stream) => {
+    console.log("stream", stream);
+
+    try {
+      // Check if window.localStream exists and has getTracks method
+      if (window.localStream && window.localStream.getTracks) {
+        window.localStream.getTracks().forEach((track) => track.stop());
+      }
+    } catch (error) {
+      console.error(error);
+    }
+
+    window.localStream = stream;
+    localVideoRef.current.srcObject = stream;
+
+    for (let id in connections) {
+      if (id === socketId.current) continue;
+
+      connections[id].addStream(window.localStream);
+      connections[id].createOffer().then((description) => {
+        connections[id]
+          .setLocalDescription(description)
+          .then(() => {
+            socketId.current.emit(
+              "signal",
+              id,
+              JSON.stringify({ sdp: connections[id].localDescription })
+            );
+          })
+          .catch((error) => {
+            console.error(error);
+          });
+      });
+    }
+
+    stream.getTracks().forEach(
+      (track) =>
+        (track.onended = () => {
+          setVideo(false);
+          setAudio(false);
+          try {
+            let tracks = localVideoRef.current.srcObject.getTracks();
+            tracks.forEach((track) => track.stop());
+          } catch (error) {
+            console.error(error);
+          }
+          //  blackSilence
+          let blackSilence = (...args) =>
+            new MediaStream([black(...args), silence()]);
+          window.localStream = blackSilence();
+          localVideoRef.current.srcObject = window.localStream;
+
+          for (let id in connections) {
+            connections[id].addStream(window.localStream);
+            connections[id].createOffer().then((description) => {
+              connections[id]
+                .setLocalDescription(description)
+                .then(() => {
+                  socketRef.current.emit(
+                    "signal",
+                    id,
+                    JSON.stringify({ sdp: connections[id].localDescription })
+                  );
+                })
+                .catch((e) => console.log(e));
+            });
+          }
+        })
+    );
+  };
+
+  const silence = () => {
+    let ctx = new AudioContext();
+    let oscillator = ctx.createOscillator();
+    let dst = oscillator.connect(ctx.createMediaStreamDestination());
+
+    oscillator.start();
+    ctx.resume();
+    return Object.assign(dst.stream.getAudioTracks()[0], { enabled: false });
+  };
+
+  const black = ({ width = 640, height = 480 } = {}) => {
+    let canvas = Object.assign(document.createElement("canvas"), {
+      width,
+      height,
+    });
+
+    canvas.getContext("2d").fillRect(0, 0, width, height);
+    let stream = canvas.captureStream();
+    return Object.assign(stream.getVideoTracks()[0], { enabled: false });
+  };
 
   const getUserMedia = () => {
     if ((audio && audioAvailable) || (video && videoAvailable)) {
       navigator.mediaDevices
         .getUserMedia({ video: video, audio: audio })
-        .then(getMediaUserSuccess) //TODO getUserMediaSuccess
+        .then(getMediaUserSuccess) // getUserMediaSuccess
         .then((stream) => {})
         .catch((error) => {
-          console.log(error);
+          console.error(error);
         });
     } else {
       try {
         let tracks = localVideoRef.current.srcObject.getTracks();
         tracks.forEach((track) => track.stop());
       } catch (error) {
-        console.log(error);
+        console.error(error);
       }
     }
   };
@@ -107,8 +216,50 @@ export default function VideoMeet() {
     }
   }, [audio, video]);
 
-  // TODO get message from server
-  const gotMessageFromServer = (formId, message) => {};
+  //  get message from server
+  const gotMessageFromServer = (fromId, message) => {
+    let signal = JSON.parse(message);
+    if (fromId !== socketId.current) {
+      if (signal.sdp) {
+        connections[fromId]
+          .setRemoteDescription(new RTCSessionDescription(signal.sdp))
+          .then(() => {
+            if (signal.sdp.type === "offer") {
+              connections[fromId]
+                .createAnswer()
+                .then((description) => {
+                  connections[fromId]
+                    .setLocalDescription(description)
+                    .then(() => {
+                      socketId.current.emit(
+                        "signal",
+                        fromId,
+                        JSON.stringify({
+                          sdp: connections[fromId].localDescription,
+                        })
+                      );
+                    })
+                    .catch((error) => {
+                      console.log(error);
+                    });
+                })
+                .catch((error) => {
+                  console.log(error);
+                });
+            }
+          })
+          .catch((error) => {
+            console.log(error);
+          });
+      }
+
+      if (signal.ice) {
+        connections[fromId]
+          .addIceCandidate(new RTCIceCandidate(signal.ice))
+          .catch((e) => console.error(e));
+      }
+    }
+  };
   // TODO add new message
   const addMessage = () => {};
 
@@ -145,7 +296,7 @@ export default function VideoMeet() {
             if (videoExists) {
               setVideos((videos) => {
                 const updatedVideos = videos.map((video) =>
-                  video.socketid === socketListId
+                  video.socketId === socketListId
                     ? { ...video, stream: event_.stream }
                     : video
                 );
@@ -170,8 +321,11 @@ export default function VideoMeet() {
           if (window.localStream !== undefined && window.localStream !== null) {
             connections[socketListId].addStream(window.localStream);
           } else {
-            //   TODO blackSilence
-            //   let blackSilence
+            //    blackSilence
+            let blackSilence = (...args) =>
+              new MediaStream([black(...args), silence()]);
+            window.localStream = blackSilence();
+            connections[socketListId].addStream(window.localStream);
           }
         });
         if (id === socketId.current) {
@@ -234,7 +388,24 @@ export default function VideoMeet() {
           </div>
         </div>
       ) : (
-        <div>other component</div>
+        <div>
+          <video ref={localVideoRef} autoPlay muted></video>
+          <div>
+            {videos.map((video) => (
+              <div key={video.socketId}>
+                <video
+                  data-socket={video.socketId}
+                  ref={(ref) => {
+                    if (ref && video.stream) {
+                      ref.srcObject = video.stream;
+                    }
+                  }}
+                  autoPlay
+                ></video>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
