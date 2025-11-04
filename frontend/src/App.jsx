@@ -5,6 +5,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import AuthPage from "./pages/AuthPage";
 import { AuthProvider } from "./contexts/AuthContext";
 import VideoMeet from "./pages/VideoMeet";
+import Home from "./pages/Home";
 
 // function Landing() {}
 
@@ -18,6 +19,7 @@ function App() {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/home" element={<Home />} />
             <Route path="/:url" element={<VideoMeet />} />
           </Routes>
         </AuthProvider>

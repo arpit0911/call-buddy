@@ -27,7 +27,14 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
         setUserData(credentials);
         localStorage.setItem("token", request.data.token);
-        router("/");
+        localStorage.setItem(
+          "user",
+          JSON.stringify({
+            name: request.data.name,
+            username: request.data.username,
+          })
+        );
+        router("/home");
       }
     } catch (error) {
       throw error;
@@ -52,11 +59,40 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const getHistoryOfUser = async () => {
+    try {
+      let request = await client.get("/get_all_activity", {
+        params: {
+          token: localStorage.getItem("token"),
+        },
+      });
+      return request.data;
+    } catch (error) {
+      console.error("Error fetching user history:", error);
+      throw error;
+    }
+  };
+
+  const addToUserHistory = async (meetingCode) => {
+    try {
+      let request = await client.post("/add_to_activity", {
+        token: localStorage.getItem("token"),
+        meetingCode: meetingCode,
+      });
+
+      return request;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const data = {
     isAuthenticated,
     userData,
     onLogin: handleLogin,
     onSignup: handleSignup,
+    getHistoryOfUser,
+    addToUserHistory,
   };
 
   return <AuthContext.Provider value={data}>{children}</AuthContext.Provider>;
