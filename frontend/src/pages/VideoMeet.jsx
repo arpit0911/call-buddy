@@ -1501,18 +1501,21 @@ export default function VideoMeet() {
           padding: 2,
           overflow: "hidden",
           minHeight: 0,
+          position: "relative", // Add this
         }}
       >
         {/* Videos Section */}
         <Box
           sx={{
-            flex: 1,
+            flex: showChat && !isMobile ? "1 1 0" : "1 1 auto", // Changed
             display: "flex",
             flexDirection: "column",
             gap: 2,
             minWidth: 0,
             minHeight: 0,
             position: "relative",
+            maxWidth: showChat && !isMobile ? "calc(100% - 370px)" : "100%", // Add this
+            overflow: "hidden", // Add this
           }}
         >
           {videos.length === 0 ? (
@@ -1525,27 +1528,35 @@ export default function VideoMeet() {
                 alignItems: "center",
                 width: "100%",
                 height: "100%",
+                overflow: "hidden", // Add this
               }}
             >
               <VideoContainer
                 elevation={2}
-                fullscreen={true} // Pass fullscreen prop
+                fullscreen={true}
                 sx={{
                   width: "100%",
                   height: "100%",
-                  maxWidth: "none", // Remove max width constraint
+                  maxWidth: "none",
                   maxHeight: "none",
                 }}
               >
-                <video ref={localVideoRef} autoPlay muted />
+                <video ref={localVideoRef} autoPlay muted playsInline />
                 <PeerName label={`${username} (You)`} variant="outlined" />
               </VideoContainer>
             </Box>
           ) : videos.length === 1 ? (
             // 1 peer: Picture-in-Picture layout
             <>
-              {/* Main Video - Peer takes full space */}
-              <Box sx={{ flex: 1, position: "relative" }}>
+              {/* Main Video - Peer */}
+              <Box
+                sx={{
+                  flex: 1,
+                  position: "relative",
+                  minHeight: 0, // Add this
+                  overflow: "hidden", // Add this
+                }}
+              >
                 <PeerVideo video={videos[0]} />
               </Box>
 
@@ -1553,32 +1564,39 @@ export default function VideoMeet() {
               <Box
                 sx={{
                   position: "absolute",
-                  bottom: 16,
-                  right: 16,
-                  width: isSmallMobile ? "120px" : isMobile ? "180px" : "240px",
+                  bottom: { xs: 12, sm: 16 },
+                  right: { xs: 12, sm: 16 },
+                  width: { xs: "100px", sm: "140px", md: "180px", lg: "240px" },
+                  height: { xs: "75px", sm: "105px", md: "135px", lg: "180px" },
                   zIndex: 10,
                   boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
-                  borderRadius: "12px",
+                  borderRadius: { xs: "8px", sm: "10px", md: "12px" },
                   overflow: "hidden",
                   transition: "all 0.3s ease",
+                  cursor: "move",
                   "&:hover": {
                     transform: "scale(1.05)",
                     boxShadow: "0 6px 16px rgba(0, 0, 0, 0.6)",
                   },
                 }}
               >
-                <VideoContainer elevation={3}>
-                  <video ref={localVideoRef} autoPlay muted />
-                  <PeerName
-                    label={`${username} (You)`}
-                    variant="outlined"
-                    size="small"
+                <VideoContainer
+                  elevation={3}
+                  sx={{ height: "100%", width: "100%" }}
+                >
+                  <video
+                    ref={localVideoRef}
+                    autoPlay
+                    muted
+                    playsInline
+                    style={{ height: "100%", width: "100%" }}
                   />
+                  <PeerName label="You" variant="outlined" size="small" />
                 </VideoContainer>
               </Box>
             </>
           ) : (
-            // Multiple peers: Grid layout with all participants
+            // Multiple peers: Grid layout
             <Grid
               container
               spacing={1}
@@ -1586,6 +1604,7 @@ export default function VideoMeet() {
                 flex: 1,
                 overflow: "auto",
                 alignContent: "flex-start",
+                minHeight: 0, // Add this
               }}
             >
               {/* Your video in grid */}
@@ -1597,7 +1616,7 @@ export default function VideoMeet() {
                 lg={videos.length <= 4 ? 6 : 4}
               >
                 <VideoContainer elevation={2}>
-                  <video ref={localVideoRef} autoPlay muted />
+                  <video ref={localVideoRef} autoPlay muted playsInline />
                   <PeerName label={`${username} (You)`} variant="outlined" />
                 </VideoContainer>
               </Grid>
@@ -1619,11 +1638,13 @@ export default function VideoMeet() {
           )}
         </Box>
 
-        {/* Chat Section (Desktop) */}
+        {/* Chat Section - Desktop */}
         {showChat && !isMobile && (
           <Paper
             sx={{
-              width: isSmallMobile ? "100%" : "320px",
+              width: "350px", // Fixed width
+              minWidth: "350px", // Prevent shrinking
+              maxWidth: "350px", // Prevent growing
               display: "flex",
               flexDirection: "column",
               backgroundColor: "rgba(0, 0, 0, 0.4)",
@@ -1631,7 +1652,7 @@ export default function VideoMeet() {
               borderRadius: "12px",
               overflow: "hidden",
               border: "1px solid rgba(255, 255, 255, 0.1)",
-              flexShrink: 0,
+              flexShrink: 0, // Keep this
               minHeight: 0,
             }}
           >
@@ -1650,7 +1671,7 @@ export default function VideoMeet() {
                   alignItems: "center",
                 }}
               >
-                <h3 style={{ margin: 0, fontSize: "14px", fontWeight: "600" }}>
+                <h3 style={{ margin: 0, fontSize: "14px", fontWeight: 600 }}>
                   Messages ({messages.length})
                 </h3>
                 <IconButton
@@ -1673,8 +1694,12 @@ export default function VideoMeet() {
                 flexDirection: "column",
                 gap: 1,
                 minHeight: 0,
-                "&::-webkit-scrollbar": { width: "6px" },
-                "&::-webkit-scrollbar-track": { background: "transparent" },
+                "&::-webkit-scrollbar": {
+                  width: "6px",
+                },
+                "&::-webkit-scrollbar-track": {
+                  background: "transparent",
+                },
                 "&::-webkit-scrollbar-thumb": {
                   background: "rgba(255, 255, 255, 0.2)",
                   borderRadius: "3px",
@@ -1693,37 +1718,35 @@ export default function VideoMeet() {
                   No messages yet
                 </Box>
               ) : (
-                <>
-                  {messages.map((msg, idx) => (
-                    <MessageBubble key={idx} isOwn={msg.isOwn}>
-                      <MessageContent isOwn={msg.isOwn}>
-                        {!msg.isOwn && (
-                          <p
-                            style={{
-                              margin: "0 0 4px 0",
-                              fontSize: "11px",
-                              opacity: 0.7,
-                            }}
-                          >
-                            {msg.sender}
-                          </p>
-                        )}
-                        <p style={{ margin: 0 }}>{msg.text}</p>
+                messages.map((msg, idx) => (
+                  <MessageBubble key={idx} isOwn={msg.isOwn}>
+                    <MessageContent isOwn={msg.isOwn}>
+                      {!msg.isOwn && (
                         <p
                           style={{
-                            margin: "4px 0 0 0",
-                            fontSize: "10px",
-                            opacity: 0.6,
+                            margin: "0 0 4px 0",
+                            fontSize: "11px",
+                            opacity: 0.7,
                           }}
                         >
-                          {msg.timestamp}
+                          {msg.sender}
                         </p>
-                      </MessageContent>
-                    </MessageBubble>
-                  ))}
-                  <div ref={messagesEndRef} />
-                </>
+                      )}
+                      <p style={{ margin: 0 }}>{msg.text}</p>
+                      <p
+                        style={{
+                          margin: "4px 0 0 0",
+                          fontSize: "10px",
+                          opacity: 0.6,
+                        }}
+                      >
+                        {msg.timestamp}
+                      </p>
+                    </MessageContent>
+                  </MessageBubble>
+                ))
               )}
+              <div ref={messagesEndRef} />
 
               {/* Typing Indicator */}
               {Object.keys(usersTyping).length > 0 && (
@@ -1764,7 +1787,9 @@ export default function VideoMeet() {
                   "& .MuiOutlinedInput-root": {
                     color: "#fff",
                     backgroundColor: "rgba(255, 255, 255, 0.05)",
-                    "& fieldset": { borderColor: "rgba(255, 255, 255, 0.2)" },
+                    "& fieldset": {
+                      borderColor: "rgba(255, 255, 255, 0.2)",
+                    },
                     "&:hover fieldset": {
                       borderColor: "rgba(255, 255, 255, 0.3)",
                     },
