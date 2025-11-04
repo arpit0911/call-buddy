@@ -39,6 +39,8 @@ import LightModeIcon from "@mui/icons-material/LightMode";
 import LinkIcon from "@mui/icons-material/Link";
 import { styled } from "@mui/material/styles";
 import withAuth from "../utils/WithAuth";
+import { useContext } from "react";
+import { AuthContext } from "../contexts/AuthContext";
 
 const StyledCard = styled(Card)(({ theme }) => ({
   borderRadius: "16px",
@@ -74,6 +76,8 @@ const Homepage = () => {
   const [newMeetingCode, setNewMeetingCode] = useState("");
   const [loading, setLoading] = useState(true);
 
+  const { addToUserHistory, getHistoryOfUser } = useContext(AuthContext);
+
   // Fetch user data and meeting history on mount
   useEffect(() => {
     fetchUserData();
@@ -83,12 +87,13 @@ const Homepage = () => {
   const fetchUserData = async () => {
     try {
       // Replace with your actual API endpoint
-      const response = await fetch("http://localhost:3000/api/user", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      const data = await response.json();
+      // const response = await fetch("http://localhost:3000/api/user", {
+      //   headers: {
+      //     Authorization: `Bearer ${localStorage.getItem("token")}`,
+      //   },
+      // });
+
+      const data = JSON.parse(localStorage.getItem("user"));
       setUser(data);
       setLoading(false);
     } catch (error) {
@@ -100,15 +105,16 @@ const Homepage = () => {
   const fetchMeetingHistory = async () => {
     try {
       // Replace with your actual API endpoint
-      const response = await fetch(
-        "http://localhost:3000/api/meetings/history",
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      const data = await response.json();
+      // const response = await fetch(
+      //   "http://localhost:3000/api/meetings/history",
+      //   {
+      //     headers: {
+      //       Authorization: `Bearer ${localStorage.getItem("token")}`,
+      //     },
+      //   }
+      // );
+      const data = await getHistoryOfUser();
+      console.log("Meeting history response:", data);
       setMeetingHistory(data);
     } catch (error) {
       console.error("Error fetching meeting history:", error);
@@ -126,17 +132,18 @@ const Homepage = () => {
 
     try {
       // Save meeting to database
-      await fetch("http://localhost:3000/api/meetings/create", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-        body: JSON.stringify({
-          meetingCode: code,
-          userId: user?.id,
-        }),
-      });
+      // await fetch("http://localhost:3000/api/meetings/create", {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //     Authorization: `Bearer ${localStorage.getItem("token")}`,
+      //   },
+      //   body: JSON.stringify({
+      //     meetingCode: code,
+      //     userId: user?.id,
+      //   }),
+      // });
+      await addToUserHistory(code);
 
       setOpenCreateDialog(true);
     } catch (error) {
@@ -144,8 +151,9 @@ const Homepage = () => {
     }
   };
 
-  const handleJoinMeeting = () => {
+  const handleJoinMeeting = async () => {
     if (meetingCode.trim()) {
+      await addToUserHistory(meetingCode.trim());
       navigate(`/${meetingCode}`);
     }
   };
@@ -162,6 +170,7 @@ const Homepage = () => {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("user");
     navigate("/");
   };
 
@@ -272,7 +281,7 @@ const Homepage = () => {
                     {user?.name || "Guest User"}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    {user?.email || "guest@example.com"}
+                    {user?.username || "guest@example.com"}
                   </Typography>
                 </Box>
 
@@ -283,6 +292,7 @@ const Homepage = () => {
                     <CalendarTodayIcon fontSize="small" color="action" />
                     <Typography variant="body2" color="text.secondary">
                       Member since{" "}
+                      {/* TODO add proper joining date into the Database */}
                       {user?.joinedDate ? formatDate(user.joinedDate) : "2025"}
                     </Typography>
                   </Box>
@@ -341,6 +351,7 @@ const Homepage = () => {
                         fontWeight="bold"
                       >
                         {
+                          // TODO:  add status property to meeting data
                           meetingHistory.filter((m) => m.status === "completed")
                             .length
                         }
@@ -503,7 +514,7 @@ const Homepage = () => {
                   <List>
                     {meetingHistory.slice(0, 5).map((meeting, index) => (
                       <ListItem
-                        key={meeting.id || index}
+                        key={meeting._id || index}
                         sx={{
                           borderRadius: "12px",
                           mb: 1,
