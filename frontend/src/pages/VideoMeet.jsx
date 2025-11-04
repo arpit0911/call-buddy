@@ -27,6 +27,8 @@ import SendIcon from "@mui/icons-material/Send";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { styled } from "@mui/material/styles";
 import { useMediaQuery, useTheme } from "@mui/material";
+import ScreenShareIcon from "@mui/icons-material/ScreenShare";
+import StopScreenShareIcon from "@mui/icons-material/StopScreenShare";
 
 const server_url = "http://localhost:3000";
 var connections = {};
@@ -921,6 +923,177 @@ export default function VideoMeet() {
       console.log("  Socket disconnected");
     });
   };
+  // Start screen sharing
+  const getDislayMedia = () => {
+    if (screen) {
+      console.log(" Starting screen share");
+
+      if (navigator.mediaDevices.getDisplayMedia) {
+        navigator.mediaDevices
+          .getDisplayMedia({ video: true, audio: true })
+          .then(getDislayMediaSuccess)
+          .then((stream) => {})
+          .catch((error) => {
+            console.error(" Screen share error:", error);
+            setScreen(false);
+          });
+      } else {
+        console.error(" getDisplayMedia not supported");
+        setScreen(false);
+      }
+    }
+  };
+
+  // Handle successful screen capture
+  const getDislayMediaSuccess = (stream) => {
+    console.log(" Screen share stream obtained");
+
+    try {
+      // Replace the video track with screen share track
+      if (window.localStream) {
+        window.localStream.getVideoTracks().forEach((track) => {
+          window.localStream.removeTrack(track);
+          track.stop();
+        });
+      }
+    } catch (error) {
+      console.error(" Error stopping video tracks:", error);
+    }
+
+    // Add screen share tracks to local stream
+    stream.getTracks().forEach((track) => {
+      window.localStream.addTrack(track);
+    });
+
+    // Update local video element
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = window.localStream;
+    }
+
+    // Send screen share to all peers
+    for (let id in connections) {
+      if (id === socketIdRef.current) continue;
+
+      try {
+        // Remove old video track sender
+        connections[id].getSenders().forEach((sender) => {
+          if (sender.track && sender.track.kind === "video") {
+            connections[id].removeTrack(sender);
+          }
+        });
+
+        // Add screen share track
+        stream.getTracks().forEach((track) => {
+          connections[id].addTrack(track, window.localStream);
+        });
+
+        // Create new offer with screen share
+        connections[id].createOffer().then((description) => {
+          connections[id]
+            .setLocalDescription(description)
+            .then(() => {
+              socketRef.current.emit(
+                "signal",
+                id,
+                JSON.stringify({ sdp: connections[id].localDescription })
+              );
+            })
+            .catch((e) =>
+              console.error(" Error setting local description:", e)
+            );
+        });
+      } catch (error) {
+        console.error(" Error updating peer with screen share:", error);
+      }
+    }
+
+    // Listen for when user stops sharing from browser UI
+    stream.getVideoTracks()[0].addEventListener("ended", () => {
+      console.log(" User stopped screen sharing via browser UI");
+      stopScreenShare();
+    });
+  };
+
+  // Stop screen sharing and return to camera
+  const stopScreenShare = async () => {
+    console.log(" Stopping screen share");
+
+    try {
+      // Stop all screen share tracks
+      if (window.localStream) {
+        window.localStream.getTracks().forEach((track) => {
+          if (track.kind === "video") {
+            track.stop();
+            window.localStream.removeTrack(track);
+          }
+        });
+      }
+
+      // Get camera back
+      const cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: videoAvailable,
+        audio: false, // Don't restart audio, it's still running
+      });
+
+      // Add camera track back
+      cameraStream.getVideoTracks().forEach((track) => {
+        window.localStream.addTrack(track);
+      });
+
+      // Update local video
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = window.localStream;
+      }
+
+      // Update all peer connections
+      for (let id in connections) {
+        if (id === socketIdRef.current) continue;
+
+        try {
+          // Remove old video sender
+          connections[id].getSenders().forEach((sender) => {
+            if (sender.track && sender.track.kind === "video") {
+              connections[id].removeTrack(sender);
+            }
+          });
+
+          // Add camera track
+          cameraStream.getVideoTracks().forEach((track) => {
+            connections[id].addTrack(track, window.localStream);
+          });
+
+          // Create offer
+          connections[id].createOffer().then((description) => {
+            connections[id]
+              .setLocalDescription(description)
+              .then(() => {
+                socketRef.current.emit(
+                  "signal",
+                  id,
+                  JSON.stringify({ sdp: connections[id].localDescription })
+                );
+              })
+              .catch((e) => console.error(" Error setting description:", e));
+          });
+        } catch (error) {
+          console.error(" Error switching back to camera:", error);
+        }
+      }
+
+      setScreen(false);
+    } catch (error) {
+      console.error(" Error getting camera back:", error);
+      setScreen(false);
+    }
+  };
+
+  // Handle screen sharing toggle
+  useEffect(() => {
+    if (screen) {
+      getDislayMedia();
+    }
+  }, [screen]);
+
   const getMedia = () => {
     console.log("getMedia called - using lobby settings:", {
       lobbyVideo,
@@ -1541,6 +1714,23 @@ export default function VideoMeet() {
                   maxHeight: "none",
                 }}
               >
+                {/* Screen Share Indicator */}
+                {screen && (
+                  <Chip
+                    icon={<ScreenShareIcon sx={{ fontSize: 14 }} />}
+                    label="Screen Sharing"
+                    size="small"
+                    sx={{
+                      position: "absolute",
+                      top: 8,
+                      right: 8,
+                      backgroundColor: "rgba(76, 175, 80, 0.9)",
+                      color: "#fff",
+                      fontSize: "11px",
+                    }}
+                  />
+                )}
+
                 <video ref={localVideoRef} autoPlay muted playsInline />
                 <PeerName label={`${username} (You)`} variant="outlined" />
               </VideoContainer>
@@ -1584,6 +1774,23 @@ export default function VideoMeet() {
                   elevation={3}
                   sx={{ height: "100%", width: "100%" }}
                 >
+                  {/* Screen Share Indicator */}
+                  {screen && (
+                    <Chip
+                      icon={<ScreenShareIcon sx={{ fontSize: 14 }} />}
+                      label="Screen Sharing"
+                      size="small"
+                      sx={{
+                        position: "absolute",
+                        top: 8,
+                        right: 8,
+                        backgroundColor: "rgba(76, 175, 80, 0.9)",
+                        color: "#fff",
+                        fontSize: "11px",
+                      }}
+                    />
+                  )}
+
                   <video
                     ref={localVideoRef}
                     autoPlay
@@ -1616,6 +1823,23 @@ export default function VideoMeet() {
                 lg={videos.length <= 4 ? 6 : 4}
               >
                 <VideoContainer elevation={2}>
+                  {/* Screen Share Indicator */}
+                  {screen && (
+                    <Chip
+                      icon={<ScreenShareIcon sx={{ fontSize: 14 }} />}
+                      label="Screen Sharing"
+                      size="small"
+                      sx={{
+                        position: "absolute",
+                        top: 8,
+                        right: 8,
+                        backgroundColor: "rgba(76, 175, 80, 0.9)",
+                        color: "#fff",
+                        fontSize: "11px",
+                      }}
+                    />
+                  )}
+
                   <video ref={localVideoRef} autoPlay muted playsInline />
                   <PeerName label={`${username} (You)`} variant="outlined" />
                 </VideoContainer>
@@ -1852,6 +2076,33 @@ export default function VideoMeet() {
             {audio ? <MicIcon /> : <MicOffIcon />}
           </IconButton>
         </Tooltip>
+        {/* Screen Share Button */}
+        {screenAvailable && !isMobile && (
+          <Tooltip title={screen ? "Stop Sharing" : "Share Screen"}>
+            <IconButton
+              onClick={() => {
+                if (screen) {
+                  stopScreenShare();
+                } else {
+                  setScreen(true);
+                }
+              }}
+              sx={{
+                backgroundColor: screen
+                  ? "rgba(76, 175, 80, 0.2)"
+                  : "rgba(102, 126, 234, 0.2)",
+                color: screen ? "#4caf50" : "#667eea",
+                "&:hover": {
+                  backgroundColor: screen
+                    ? "rgba(76, 175, 80, 0.3)"
+                    : "rgba(102, 126, 234, 0.3)",
+                },
+              }}
+            >
+              {screen ? <StopScreenShareIcon /> : <ScreenShareIcon />}
+            </IconButton>
+          </Tooltip>
+        )}
 
         {isMobile && (
           <Tooltip title="Toggle Chat">
