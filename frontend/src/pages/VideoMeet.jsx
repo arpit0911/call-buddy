@@ -36,14 +36,16 @@ const peerConfigConnections = {
 };
 
 // Styled Components
-const VideoContainer = styled(Paper)(({ theme }) => ({
+const VideoContainer = styled(Paper)(({ theme, fullscreen }) => ({
   backgroundColor: "#000",
-  borderRadius: "12px",
+  borderRadius: fullscreen ? "0px" : "12px",
   overflow: "hidden",
   position: "relative",
-  aspectRatio: "16/9",
+  aspectRatio: fullscreen ? "unset" : "16/9",
+  height: fullscreen ? "100%" : "auto",
+  width: fullscreen ? "100%" : "auto",
   [theme.breakpoints.down("sm")]: {
-    aspectRatio: "4/3",
+    aspectRatio: fullscreen ? "unset" : "4/3",
   },
   "& video": {
     width: "100%",
@@ -1034,11 +1036,19 @@ export default function VideoMeet() {
                 display: "flex",
                 justifyContent: "center",
                 alignItems: "center",
+                width: "100%",
+                height: "100%",
               }}
             >
               <VideoContainer
                 elevation={2}
-                sx={{ maxWidth: "800px", width: "100%" }}
+                fullscreen={true} // Pass fullscreen prop
+                sx={{
+                  width: "100%",
+                  height: "100%",
+                  maxWidth: "none", // Remove max width constraint
+                  maxHeight: "none",
+                }}
               >
                 <video ref={localVideoRef} autoPlay muted />
                 <PeerName label={`${username} (You)`} variant="outlined" />
