@@ -26,7 +26,7 @@ const start = async () => {
   );
   console.log(`MONGO Connected Host: ${connectionDB.connection.host}`);
   server.listen(app.get("port"), () => {
-    console.log("servicer is running on port 3000");
+    console.log("servicer is running on port ", app.get("port"));
   });
 };
 

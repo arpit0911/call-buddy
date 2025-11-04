@@ -20,7 +20,7 @@ const login = async (req, res) => {
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (isPasswordValid) {
       let token = crypto.randomBytes(20).toString("hex");
-      user.token = token;
+      user.token = token; 
       await user.save();
 
       return res.status(httpStatus.OK).json({ toke: token });
