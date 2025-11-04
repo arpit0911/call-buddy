@@ -17,6 +17,7 @@ import {
 import { useState, useEffect, useRef, memo } from "react";
 import io from "socket.io-client";
 import VideocamIcon from "@mui/icons-material/Videocam";
+import ChatIcon from "@mui/icons-material/Chat";
 import VideocamOffIcon from "@mui/icons-material/VideocamOff";
 import MicIcon from "@mui/icons-material/Mic";
 import MicOffIcon from "@mui/icons-material/MicOff";
@@ -988,10 +989,13 @@ export default function VideoMeet() {
                   setShowChat(!showChat);
                   setNewMessages(0);
                 }}
-                sx={{ color: "#fff" }}
+                sx={{
+                  color: "#fff",
+                  "&:hover": { backgroundColor: "rgba(69, 69, 69, 0.9)" },
+                }}
               >
                 <Badge badgeContent={newMessages} color="error">
-                  <SendIcon />
+                  <ChatIcon />
                 </Badge>
               </IconButton>
             </Tooltip>
@@ -1019,25 +1023,97 @@ export default function VideoMeet() {
             gap: 2,
             minWidth: 0,
             minHeight: 0,
+            position: "relative",
           }}
         >
-          {/* Local Video */}
-          <VideoContainer elevation={2}>
-            <video ref={localVideoRef} autoPlay muted />
-            <PeerName label={`${username} (You)`} variant="outlined" />
-          </VideoContainer>
+          {videos.length === 0 ? (
+            // No peers: Show only your video centered
+            <Box
+              sx={{
+                flex: 1,
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+              }}
+            >
+              <VideoContainer
+                elevation={2}
+                sx={{ maxWidth: "800px", width: "100%" }}
+              >
+                <video ref={localVideoRef} autoPlay muted />
+                <PeerName label={`${username} (You)`} variant="outlined" />
+              </VideoContainer>
+            </Box>
+          ) : videos.length === 1 ? (
+            // 1 peer: Picture-in-Picture layout
+            <>
+              {/* Main Video - Peer takes full space */}
+              <Box sx={{ flex: 1, position: "relative" }}>
+                <PeerVideo video={videos[0]} />
+              </Box>
 
-          {/* Remote Videos Grid */}
-          {videos.length > 0 && (
-            <Grid container spacing={1} sx={{ flex: 1 }}>
+              {/* Your Video - Floating overlay in corner */}
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: 16,
+                  right: 16,
+                  width: isSmallMobile ? "120px" : isMobile ? "180px" : "240px",
+                  zIndex: 10,
+                  boxShadow: "0 4px 12px rgba(0, 0, 0, 0.4)",
+                  borderRadius: "12px",
+                  overflow: "hidden",
+                  transition: "all 0.3s ease",
+                  "&:hover": {
+                    transform: "scale(1.05)",
+                    boxShadow: "0 6px 16px rgba(0, 0, 0, 0.6)",
+                  },
+                }}
+              >
+                <VideoContainer elevation={3}>
+                  <video ref={localVideoRef} autoPlay muted />
+                  <PeerName
+                    label={`${username} (You)`}
+                    variant="outlined"
+                    size="small"
+                  />
+                </VideoContainer>
+              </Box>
+            </>
+          ) : (
+            // Multiple peers: Grid layout with all participants
+            <Grid
+              container
+              spacing={1}
+              sx={{
+                flex: 1,
+                overflow: "auto",
+                alignContent: "flex-start",
+              }}
+            >
+              {/* Your video in grid */}
+              <Grid
+                item
+                xs={12}
+                sm={videos.length === 2 ? 6 : 6}
+                md={videos.length === 2 ? 6 : videos.length === 3 ? 6 : 4}
+                lg={videos.length <= 4 ? 6 : 4}
+              >
+                <VideoContainer elevation={2}>
+                  <video ref={localVideoRef} autoPlay muted />
+                  <PeerName label={`${username} (You)`} variant="outlined" />
+                </VideoContainer>
+              </Grid>
+
+              {/* Peer videos in grid */}
               {videos.map((video) => (
                 <Grid
                   item
                   xs={12}
-                  sm={videos.length === 1 ? 12 : 6}
-                  md={videos.length === 1 ? 12 : 6}
+                  sm={videos.length === 1 ? 6 : 6}
+                  md={videos.length === 1 ? 6 : videos.length === 2 ? 6 : 4}
+                  lg={videos.length <= 3 ? 6 : 4}
                   key={video.socketId}
-                  sx={{ minHeight: 0 }}
                 >
                   <PeerVideo video={video} />
                 </Grid>
