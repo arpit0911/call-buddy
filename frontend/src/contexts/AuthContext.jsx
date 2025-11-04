@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
         setUserData(credentials);
         localStorage.setItem("token", request.data.token);
-        router("/");
+        router("/home");
       }
     } catch (error) {
       throw error;

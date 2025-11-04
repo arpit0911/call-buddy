@@ -23,7 +23,7 @@ const login = async (req, res) => {
       user.token = token; 
       await user.save();
 
-      return res.status(httpStatus.OK).json({ toke: token });
+      return res.status(httpStatus.OK).json({ token: token });
     } else {
       return res
         .status(httpStatus.UNAUTHORIZED)
