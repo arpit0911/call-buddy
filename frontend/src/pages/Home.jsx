@@ -542,10 +542,11 @@ const Homepage = () => {
                         </ListItemAvatar>
                         <ListItemText
                           primary={
-                            <Typography fontWeight="bold">
+                            <Typography fontWeight="bold" component="div">
                               Meeting #{meeting.meetingCode}
                             </Typography>
                           }
+                          secondaryTypographyProps={{ component: "div" }}
                           secondary={
                             <Box sx={{ display: "flex", gap: 2, mt: 0.5 }}>
                               <Box
