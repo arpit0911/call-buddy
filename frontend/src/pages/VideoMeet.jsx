@@ -29,8 +29,9 @@ import { styled } from "@mui/material/styles";
 import { useMediaQuery, useTheme } from "@mui/material";
 import ScreenShareIcon from "@mui/icons-material/ScreenShare";
 import StopScreenShareIcon from "@mui/icons-material/StopScreenShare";
+import { server } from "../environment";
 
-const server_url = "http://localhost:3000";
+const server_url = server;
 var connections = {};
 
 const peerConfigConnections = {
