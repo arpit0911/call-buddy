@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import httpStatus from "http-status";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -12,9 +12,16 @@ const client = axios.create({
 export const AuthProvider = ({ children }) => {
   //   const authContext = useContext(AuthContext);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const router = useNavigate();
+  const navigate = useNavigate();
 
   const [userData, setUserData] = useState();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      setIsAuthenticated(true);
+    }
+  }, []);
 
   const handleLogin = async (credentials) => {
     // Implement your login logic here
@@ -34,12 +41,12 @@ export const AuthProvider = ({ children }) => {
             username: request.data.username,
           })
         );
-        router("/home");
+        navigate("/home", { replace: true }); // Use replace to prevent back navigation
       }
     } catch (error) {
       throw error;
     }
-    setIsAuthenticated(true);
+    // setIsAuthenticated(true);
   };
 
   const handleSignup = async (credentials) => {
@@ -52,7 +59,7 @@ export const AuthProvider = ({ children }) => {
       if (request.status === httpStatus.CREATED) {
         setIsAuthenticated(true);
         setUserData(credentials);
-        // router("/");
+        // navigate("/");
       }
     } catch (error) {
       throw error;
