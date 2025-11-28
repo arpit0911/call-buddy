@@ -9,7 +9,7 @@ const withAuth = (WrappedComponent) => {
 
     useEffect(() => {
       if (!isAuthenticated) {
-        navigate("/auth"); //  Use replace to clear history
+        navigate("/"); //  Use replace to clear history
       }
     }, [isAuthenticated, navigate]);
 
