@@ -76,7 +76,8 @@ const Homepage = () => {
   const [newMeetingCode, setNewMeetingCode] = useState("");
   const [loading, setLoading] = useState(true);
 
-  const { addToUserHistory, getHistoryOfUser } = useContext(AuthContext);
+  const { addToUserHistory, getHistoryOfUser, setIsAuthenticated } =
+    useContext(AuthContext);
 
   // Fetch user data and meeting history on mount
   useEffect(() => {
@@ -171,7 +172,9 @@ const Homepage = () => {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
-    navigate("/");
+
+    if (setIsAuthenticated) setIsAuthenticated(false);
+    navigate("/", { replace: true });
   };
 
   const formatDate = (dateString) => {
@@ -352,8 +355,9 @@ const Homepage = () => {
                       >
                         {
                           // TODO:  add status property to meeting data
-                          meetingHistory.filter((m) => m.status === "completed")
-                            .length
+                          meetingHistory?.filter(
+                            (m) => m.status === "completed"
+                          ).length
                         }
                       </Typography>
                       <Typography variant="caption" color="text.secondary">

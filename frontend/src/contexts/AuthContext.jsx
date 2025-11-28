@@ -12,6 +12,8 @@ const client = axios.create({
 export const AuthProvider = ({ children }) => {
   //   const authContext = useContext(AuthContext);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); //  Loading state
+
   const navigate = useNavigate();
 
   const [userData, setUserData] = useState();
@@ -21,6 +23,7 @@ export const AuthProvider = ({ children }) => {
     if (token) {
       setIsAuthenticated(true);
     }
+    setIsLoading(false); //  Mark loading complete
   }, []);
 
   const handleLogin = async (credentials) => {
@@ -41,7 +44,7 @@ export const AuthProvider = ({ children }) => {
             username: request.data.username,
           })
         );
-        navigate("/home", { replace: true }); // Use replace to prevent back navigation
+        navigate("/home"); // Use replace to prevent back navigation
       }
     } catch (error) {
       throw error;
@@ -95,6 +98,8 @@ export const AuthProvider = ({ children }) => {
 
   const data = {
     isAuthenticated,
+    isLoading, // Expose loading state
+    setIsAuthenticated,
     userData,
     onLogin: handleLogin,
     onSignup: handleSignup,
