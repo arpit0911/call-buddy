@@ -1,9 +1,19 @@
 import React from "react";
 import "../App.css";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@mui/material";
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+  const generateMeetingCode = () => {
+    const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+    return code;
+  };
+
+  const joinAsGuest = () => {
+    const code = generateMeetingCode();
+    navigate(`/${code}`);
+  };
   return (
     <div className="landing-page-container">
       <nav>
@@ -14,6 +24,7 @@ export default function LandingPage() {
           <Button
             variant="link"
             sx={{ textTransform: "capitalize", color: "white" }}
+            onClick={joinAsGuest}
           >
             Join as Guest
           </Button>

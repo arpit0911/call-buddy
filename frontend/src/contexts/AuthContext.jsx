@@ -1,20 +1,31 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 import httpStatus from "http-status";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { server } from "../environment";
 
 export const AuthContext = createContext({});
 
 const client = axios.create({
-  baseURL: "http://localhost:3000/api/v1/users",
+  baseURL: `${server}/api/v1/users`,
 });
 
 export const AuthProvider = ({ children }) => {
   //   const authContext = useContext(AuthContext);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const router = useNavigate();
+  const [isLoading, setIsLoading] = useState(true); //  Loading state
+
+  const navigate = useNavigate();
 
   const [userData, setUserData] = useState();
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      setIsAuthenticated(true);
+    }
+    setIsLoading(false); //  Mark loading complete
+  }, []);
 
   const handleLogin = async (credentials) => {
     // Implement your login logic here
@@ -34,12 +45,12 @@ export const AuthProvider = ({ children }) => {
             username: request.data.username,
           })
         );
-        router("/home");
+        navigate("/home"); // Use replace to prevent back navigation
       }
     } catch (error) {
       throw error;
     }
-    setIsAuthenticated(true);
+    // setIsAuthenticated(true);
   };
 
   const handleSignup = async (credentials) => {
@@ -52,7 +63,7 @@ export const AuthProvider = ({ children }) => {
       if (request.status === httpStatus.CREATED) {
         setIsAuthenticated(true);
         setUserData(credentials);
-        // router("/");
+        // navigate("/");
       }
     } catch (error) {
       throw error;
@@ -88,6 +99,8 @@ export const AuthProvider = ({ children }) => {
 
   const data = {
     isAuthenticated,
+    isLoading, // Expose loading state
+    setIsAuthenticated,
     userData,
     onLogin: handleLogin,
     onSignup: handleSignup,

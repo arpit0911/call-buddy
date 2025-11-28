@@ -6,6 +6,7 @@ import AuthPage from "./pages/AuthPage";
 import { AuthProvider } from "./contexts/AuthContext";
 import VideoMeet from "./pages/VideoMeet";
 import Home from "./pages/Home";
+import PublicRoute from "./utils/PublicRoute";
 
 // function Landing() {}
 
@@ -17,8 +18,22 @@ function App() {
       <BrowserRouter>
         <AuthProvider>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/auth" element={<AuthPage />} />
+            <Route
+              path="/"
+              element={
+                <PublicRoute>
+                  <LandingPage />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/auth"
+              element={
+                <PublicRoute>
+                  <AuthPage />
+                </PublicRoute>
+              }
+            />
             <Route path="/home" element={<Home />} />
             <Route path="/:url" element={<VideoMeet />} />
           </Routes>
