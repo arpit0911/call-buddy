@@ -20,7 +20,7 @@ export const AuthProvider = ({ children }) => {
   const [userData, setUserData] = useState();
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = sessionStorage.getItem("token");
     if (token) {
       setIsAuthenticated(true);
     }
@@ -37,8 +37,8 @@ export const AuthProvider = ({ children }) => {
       if (request.status === httpStatus.OK) {
         setIsAuthenticated(true);
         setUserData(credentials);
-        localStorage.setItem("token", request.data.token);
-        localStorage.setItem(
+        sessionStorage.setItem("token", request.data.token);
+        sessionStorage.setItem(
           "user",
           JSON.stringify({
             name: request.data.name,
@@ -74,7 +74,7 @@ export const AuthProvider = ({ children }) => {
     try {
       let request = await client.get("/get_all_activity", {
         params: {
-          token: localStorage.getItem("token"),
+          token: sessionStorage.getItem("token"),
         },
       });
       return request.data;
@@ -87,7 +87,7 @@ export const AuthProvider = ({ children }) => {
   const addToUserHistory = async (meetingCode) => {
     try {
       let request = await client.post("/add_to_activity", {
-        token: localStorage.getItem("token"),
+        token: sessionStorage.getItem("token"),
         meetingCode: meetingCode,
       });
 

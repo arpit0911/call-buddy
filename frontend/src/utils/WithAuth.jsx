@@ -5,7 +5,7 @@ import { AuthContext } from "../contexts/AuthContext";
 const withAuth = (WrappedComponent) => {
   const AuthComponent = (props) => {
     const navigate = useNavigate();
-    const { isAuthenticated } = useContext(AuthContext); //  Use AuthContext instead of localStorage
+    const { isAuthenticated } = useContext(AuthContext); //  Use AuthContext instead of sessionStorage
 
     useEffect(() => {
       if (!isAuthenticated) {

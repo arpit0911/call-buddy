@@ -90,11 +90,11 @@ const Homepage = () => {
       // Replace with your actual API endpoint
       // const response = await fetch("http://localhost:3000/api/user", {
       //   headers: {
-      //     Authorization: `Bearer ${localStorage.getItem("token")}`,
+      //     Authorization: `Bearer ${sessionStorage.getItem("token")}`,
       //   },
       // });
 
-      const data = JSON.parse(localStorage.getItem("user"));
+      const data = JSON.parse(sessionStorage.getItem("user"));
       setUser(data);
       setLoading(false);
     } catch (error) {
@@ -110,7 +110,7 @@ const Homepage = () => {
       //   "http://localhost:3000/api/meetings/history",
       //   {
       //     headers: {
-      //       Authorization: `Bearer ${localStorage.getItem("token")}`,
+      //       Authorization: `Bearer ${sessionStorage.getItem("token")}`,
       //     },
       //   }
       // );
@@ -137,7 +137,7 @@ const Homepage = () => {
       //   method: "POST",
       //   headers: {
       //     "Content-Type": "application/json",
-      //     Authorization: `Bearer ${localStorage.getItem("token")}`,
+      //     Authorization: `Bearer ${sessionStorage.getItem("token")}`,
       //   },
       //   body: JSON.stringify({
       //     meetingCode: code,
@@ -170,8 +170,8 @@ const Homepage = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
 
     if (setIsAuthenticated) setIsAuthenticated(false);
     navigate("/", { replace: true });

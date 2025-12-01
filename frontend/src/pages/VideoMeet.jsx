@@ -448,8 +448,8 @@ export default function VideoMeet() {
 
   useEffect(() => {
     console.log("  Initializing permissions");
-    if (localStorage.getItem("token")) {
-      const currentUser = JSON.parse(localStorage.getItem("user"));
+    if (sessionStorage.getItem("token")) {
+      const currentUser = JSON.parse(sessionStorage.getItem("user"));
       setUsername(currentUser?.name || "Guest User");
     }
     getPermissions();
