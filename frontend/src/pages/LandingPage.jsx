@@ -161,10 +161,9 @@ export default function LandingPage() {
         "Create a meeting in seconds. No sign-up required. Just click and connect.",
     },
     {
-      icon: "🔒",
-      title: "Secure & Private",
-      description:
-        "End-to-end encryption keeps your conversations private and secure.",
+      icon: "💬",
+      title: "Integrated Chat",
+      description: "Integrated chat feature to converse during the call.",
     },
     {
       icon: "🌍",
