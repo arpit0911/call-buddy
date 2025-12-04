@@ -16,11 +16,11 @@ export const connectToSocket = (server) => {
   });
 
   io.on("connection", (socket) => {
-    console.log("🟢 User connected:", socket.id);
+    console.log(" User connected:", socket.id);
 
     socket.on("join-call", (path, username = "Anonymous") => {
       console.log(
-        `📍 User ${socket.id} joining call on path: ${path}, username: ${username}`
+        ` User ${socket.id} joining call on path: ${path}, username: ${username}`
       );
 
       usernames[socket.id] = username;
@@ -32,7 +32,7 @@ export const connectToSocket = (server) => {
       timeOnline[socket.id] = new Date();
 
       // FIX: Only emit to other users, not the joining user
-      console.log(`👥 Total users in room ${path}:`, connections[path].length);
+      console.log(` Total users in room ${path}:`, connections[path].length);
 
       for (let i = 0; i < connections[path].length; i++) {
         // Emit "user-joined" to notify about the new user
@@ -47,7 +47,7 @@ export const connectToSocket = (server) => {
       // Send previous messages to the newly joined user
       if (messages[path] !== undefined) {
         console.log(
-          `💬 Sending ${messages[path].length} previous messages to ${socket.id}`
+          ` Sending ${messages[path].length} previous messages to ${socket.id}`
         );
         for (let i = 0; i < messages[path].length; i++) {
           io.to(socket.id).emit(
@@ -62,13 +62,13 @@ export const connectToSocket = (server) => {
     });
 
     socket.on("signal", (toId, message) => {
-      console.log(`🔄 Signal from ${socket.id} to ${toId}`);
+      console.log(` Signal from ${socket.id} to ${toId}`);
       io.to(toId).emit("signal", socket.id, message);
     });
 
     socket.on("chat-message", (data, sender) => {
       console.log(
-        `💬 Chat message from ${socket.id}: "${data}" (sender: ${sender})`
+        ` Chat message from ${socket.id}: "${data}" (sender: ${sender})`
       );
 
       const [matchingRoom, found] = Object.entries(connections).reduce(
@@ -82,7 +82,7 @@ export const connectToSocket = (server) => {
       );
 
       if (found === true) {
-        console.log(`✅ Found matching room: ${matchingRoom}`);
+        console.log(` Found matching room: ${matchingRoom}`);
 
         if (messages[matchingRoom] === undefined) {
           messages[matchingRoom] = [];
@@ -97,13 +97,13 @@ export const connectToSocket = (server) => {
 
         messages[matchingRoom].push(messageObj);
         console.log(
-          `📝 Message stored. Total messages in room: ${messages[matchingRoom].length}`
+          ` Message stored. Total messages in room: ${messages[matchingRoom].length}`
         );
 
         // FIX: Emit ONLY to other users, not back to sender
         connections[matchingRoom].forEach((element) => {
           if (element !== socket.id) {
-            console.log(`📤 Emitting message to ${element}`);
+            console.log(` Emitting message to ${element}`);
             io.to(element).emit(
               "chat-message",
               data,
@@ -114,15 +114,15 @@ export const connectToSocket = (server) => {
           }
         });
       } else {
-        console.warn(`⚠️ No matching room found for socket ${socket.id}`);
+        console.warn(` No matching room found for socket ${socket.id}`);
       }
     });
 
     socket.on("disconnect", () => {
-      console.log(`🔴 User disconnected: ${socket.id}`);
+      console.log(` User disconnected: ${socket.id}`);
 
       var diffTime = Math.abs(new Date() - timeOnline[socket.id]);
-      console.log(`⏱️ User was online for: ${diffTime}ms`);
+      console.log(` User was online for: ${diffTime}ms`);
 
       var key;
 
@@ -132,7 +132,7 @@ export const connectToSocket = (server) => {
         for (let i = 0; i < v.length; ++i) {
           if (v[i] === socket.id) {
             key = k;
-            console.log(`🗑️ Cleaning up room: ${key}`);
+            console.log(` Cleaning up room: ${key}`);
 
             for (let j = 0; j < connections[key].length; ++j) {
               io.to(connections[key][j]).emit("user-left", socket.id);
@@ -144,7 +144,7 @@ export const connectToSocket = (server) => {
             if (connections[key].length === 0) {
               delete connections[key];
               delete messages[key];
-              console.log(`🧹 Deleted empty room: ${key}`);
+              console.log(` Deleted empty room: ${key}`);
             }
 
             break;

@@ -1502,7 +1502,7 @@ export default function VideoMeet() {
                   color: "#ff9800",
                 }}
               >
-                ⚠️{" "}
+                {" "}
                 {!videoAvailable && !audioAvailable
                   ? "Camera and microphone access denied"
                   : !videoAvailable
